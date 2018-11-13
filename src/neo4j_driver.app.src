@@ -1,0 +1,15 @@
+{application, neo4j_driver,
+ [{description, "Client lirary for interacting wiht a Neo4J database."},
+  {vsn, "0.0.1"},
+  {registered, []},
+  {applications,
+   [kernel,
+    stdlib
+   ]},
+  {env,[]},
+  {modules, []},
+
+  {maintainers, []},
+  {licenses, ["Apache 2.0"]},
+  {links, []}
+ ]}.
