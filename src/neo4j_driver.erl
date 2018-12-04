@@ -4,16 +4,18 @@
 -export([
   init/0,
   options/4,
+  make_statements/1,
   run/2
 ]).
 
--export([test/0]).
+-export([test/0, test2/0]).
 
 %%====================================================================
 %% API functions
 %%====================================================================
 
 init() ->
+  io:format("~n --- neo4j_driver:init --- ~n~n"),
   application:ensure_all_started(restc).
 
 options(Host, Port, Username, Password) ->
@@ -37,6 +39,8 @@ run(Options, Statements) ->
     "/db/data/transaction/commit"
   ),
   send_post(Url, make_statements(Statements)).
+
+% element(2, lists:nth(2, lists:nth(1, element(2, lists:nth(2, element(4, A)))))).
 
 test() ->
   neo4j_driver:init(),
@@ -62,54 +66,81 @@ test() ->
   ],
   neo4j_driver:run(Options, Statements).
 
-% "parameters" : {
-%       "props" : {
-%         "name" : "My Node"
-%       }
-%     }
+test2() ->
+  neo4j_driver:init(),
+  Options = neo4j_driver:options("localhost", "7474", "neo4j", "Neo4j"),
+  Statements = [
+    [
+      { statement, "CREATE (a:Person {name: $name}) RETURN a" },
+      { parameters, [ { "name", "Valaki" } ] }
+    ],
+    [
+      { statement, "CREATE (n:Sajt)" }
+    ],
+    [
+      { statement, "CREATE (n {props}) RETURN n" },
+      { parameters, [
+          { "props", [
+              { "name", "My node" }
+            ]
+          }
+        ]
+      }
+    ]
+  ],
+  neo4j_driver:run(Options, Statements).
+
 
 %%====================================================================
 %% Internal functions
 %%====================================================================
 
-% make_parameter_binary(Parameter) ->
-%   { Key, Value } = Parameter,
-%   { list_to_binary(Key), list_to_binary(Value) }.
+nested_strings_to_binary(Value) ->
+  if
+    is_tuple(Value) -> my_tuple_to_binary(Value);
+    is_list(Value) -> my_list_to_binary(Value)
+  end.
 
-make_parameter_binary({ Key, Value }) ->
-  { make_parameter_binary(Key), make_parameter_binary(Value) };
-make_parameter_binary(List) ->
-  lists:map(fun make_parameter_binary/1, List);
-make_parameter_binary(String) ->
-  list_to_binary(String).
+my_tuple_to_binary(Tuple) ->
+  { Key, Value } = Tuple,
+  { list_to_binary(Key), nested_strings_to_binary(Value) }.
 
-% make_statement(Statement) ->
-%   [
-%     { <<"statement">>, list_to_binary(Statement) }
-%   ].
+my_list_to_binary(List) ->
+  case lists:any(fun is_tuple/1, List) of
+    true -> lists:map(fun my_tuple_to_binary/1, List);
+    false ->
+      case lists:any(fun is_list/1, List) of
+        true -> lists:map(fun my_list_to_binary/1, List);
+        false -> list_to_binary(List)
+      end
+  end.
+
 make_statement(Statement) ->
   [
     {
       <<"statement">>,
       list_to_binary(proplists:get_value(statement, Statement))
-    },
-    {
-      <<"parameters">>,
-      lists:map(
-        fun make_parameter_binary/1,
-        proplists:get_value(parameters, Statement, [])
-      )
     }
-  ].
+  ]
+  ++
+  case proplists:is_defined(parameters, Statement) of
+    true ->
+      [
+        {
+          <<"parameters">>,
+          nested_strings_to_binary(proplists:get_value(parameters, Statement, []))
+        }
+      ];
+
+    false -> []
+  end.
 
 make_statements(Statements) ->
-  A = [
+  [
     {
       <<"statements">>, lists:map(fun make_statement/1, Statements)
     }
-  ],
-  io:format("Sajt: ~p", A),
-  A.
+  ].
 
 send_post(Url, Body) ->
   restc:request(post, json, Url, [], [], Body, []).
