@@ -8,7 +8,7 @@
   run/2
 ]).
 
--export([test/0, test2/0]).
+-export([testOptions/0, test/0, test2/0]).
 
 %%====================================================================
 %% API functions
@@ -42,9 +42,11 @@ run(Options, Statements) ->
 
 % element(2, lists:nth(2, lists:nth(1, element(2, lists:nth(2, element(4, A)))))).
 
+testOptions() ->
+  neo4j_driver:options("localhost", "7474", "testUser", "testPassword").
+
 test() ->
   neo4j_driver:init(),
-  Options = neo4j_driver:options("localhost", "7474", "test", "valami"),
   Statements = [
     [
       { statement, "CREATE (a:Person {name: $name}) RETURN a" },
@@ -64,11 +66,10 @@ test() ->
       }
     ]
   ],
-  neo4j_driver:run(Options, Statements).
+  neo4j_driver:run(testOptions(), Statements).
 
 test2() ->
   neo4j_driver:init(),
-  Options = neo4j_driver:options("localhost", "7474", "neo4j", "Neo4j"),
   Statements = [
     [
       { statement, "CREATE (a:Person {name: $name}) RETURN a" },
@@ -88,7 +89,7 @@ test2() ->
       }
     ]
   ],
-  neo4j_driver:run(Options, Statements).
+  neo4j_driver:run(testOptions(), Statements).
 
 
 %%====================================================================
