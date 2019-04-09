@@ -10,8 +10,6 @@
   get_results/1
 ]).
 
--export([testOptions/0, test/0, test2/0]).
-
 %%====================================================================
 %% API functions
 %%====================================================================
@@ -58,59 +56,13 @@ get_results(Response) ->
     {"results", Results},
     {"errors", Errors}
   ]} = Response,
-  Results.
+
+  case Errors of
+    [] -> Results;
+    ErrorList -> throw({ query_error, ErrorList })
+  end.
 
 % element(2, lists:nth(2, lists:nth(1, element(2, lists:nth(2, element(4, A)))))).
-
-testOptions() ->
-  neo4j_driver:options("localhost", "7474", "testUser", "testPassword").
-
-test() ->
-  neo4j_driver:init(),
-  Statements = [
-    [
-      { statement, "CREATE (a:Person {name: $name}) RETURN a" },
-      { parameters, [ { "name", "Valaki" } ] }
-    ],
-    [
-      { statement, "CREATE (n:Sajt)" }
-    ],
-    [
-      { statement, "CREATE (n {props}) RETURN n" },
-      { parameters, [
-          { "props", [
-              { "name", "My node" }
-            ]
-          }
-        ]
-      }
-    ]
-  ],
-  neo4j_driver:run(testOptions(), Statements).
-
-test2() ->
-  neo4j_driver:init(),
-  Statements = [
-    [
-      { statement, "CREATE (a:Person {name: $name}) RETURN a" },
-      { parameters, [ { "name", "Valaki" } ] }
-    ],
-    [
-      { statement, "CREATE (n:Sajt)" }
-    ],
-    [
-      { statement, "CREATE (n {props}) RETURN n" },
-      { parameters, [
-          { "props", [
-              { "name", "My node" }
-            ]
-          }
-        ]
-      }
-    ]
-  ],
-  neo4j_driver:run(testOptions(), Statements).
-
 
 %%====================================================================
 %% Internal functions
